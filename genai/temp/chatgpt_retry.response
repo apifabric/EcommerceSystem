@@ -1,0 +1,62 @@
+{
+    "models": [
+        {
+            "classname": "Customer",
+            "code": "class Customer(Base):\n    \"\"\"description: Customers table, storing customer details and account balances.\"\"\"\n    __tablename__ = 'customers'\n\n    id = Column(Integer, primary_key=True, autoincrement=True)\n    name = Column(String, nullable=False)\n    balance = Column(Integer)  # Derived column\n    credit_limit = Column(Integer, default=1000)\n",
+            "description": "Model for storing customers with account details.",
+            "name": "Customer"
+        },
+        {
+            "classname": "Order",
+            "code": "class Order(Base):\n    \"\"\"description: Orders table, each linked to a customer.\"\"\"\n    __tablename__ = 'orders'\n\n    id = Column(Integer, primary_key=True, autoincrement=True)\n    customer_id = Column(Integer, ForeignKey('customers.id'))\n    date_shipped = Column(DateTime)\n    amount_total = Column(Integer)  # Derived column\n    notes = Column(String)\n",
+            "description": "Model for storing orders linked to customers.",
+            "name": "Order"
+        },
+        {
+            "classname": "Item",
+            "code": "class Item(Base):\n    \"\"\"description: Items table, each linked to an order and a product.\"\"\"\n    __tablename__ = 'items'\n\n    id = Column(Integer, primary_key=True, autoincrement=True)\n    order_id = Column(Integer, ForeignKey('orders.id'))\n    product_id = Column(Integer, ForeignKey('products.id'))\n    quantity = Column(Integer, default=1)\n    unit_price = Column(Integer)  # Copied from product\n    amount = Column(Integer)  # Derived column\n",
+            "description": "Model for storing item details linked to product.",
+            "name": "Item"
+        },
+        {
+            "classname": "Product",
+            "code": "class Product(Base):\n    \"\"\"description: Products table, storing product details.\"\"\"\n    __tablename__ = 'products'\n\n    id = Column(Integer, primary_key=True, autoincrement=True)\n    name = Column(String, nullable=False)\n    unit_price = Column(Integer)\n",
+            "description": "Model for storing products available for sale.",
+            "name": "Product"
+        }
+    ],
+    "rules": [
+        {
+            "name": "Customer Balance Constraint",
+            "description": "Ensures the customer's balance does not exceed their credit limit.",
+            "use_case": "1. The Customer's balance is less than the credit limit",
+            "code": "Rule.constraint(validate=Customer,\n                as_condition=lambda row: row.balance <= row.credit_limit,\n                error_msg=\"Customer balance ({row.balance}) exceeds credit limit ({row.credit_limit})\")"
+        },
+        {
+            "name": "Customer Balance Sum",
+            "description": "Derives the balance as the sum of Order amount_total where date_shipped is null.",
+            "use_case": "2. The Customer's balance is the sum of the Order amount_total where date_shipped is null",
+            "code": "Rule.sum(derive=Customer.balance, as_sum_of=Order.amount_total, where=lambda row: row.date_shipped is None)"
+        },
+        {
+            "name": "Order Amount Total Sum",
+            "description": "Derives the order's amount_total as the sum of item amounts.",
+            "use_case": "3. The Order's amount_total is the sum of the Item amount",
+            "code": "Rule.sum(derive=Order.amount_total, as_sum_of=Item.amount)"
+        },
+        {
+            "name": "Item Amount Formula",
+            "description": "Calculates the item amount as quantity multiplied by unit price.",
+            "use_case": "4. The Item amount is the quantity * unit_price",
+            "code": "Rule.formula(derive=Item.amount, as_expression=lambda row: row.quantity * row.unit_price)"
+        },
+        {
+            "name": "Item Unit Price Copy",
+            "description": "Copies the unit price from Product to Item.",
+            "use_case": "5. The Item unit_price is copied from the Product unit_price",
+            "code": "Rule.copy(derive=Item.unit_price, from_parent=Product.unit_price)"
+        }
+    ],
+    "test_data": "from datetime import date\n\ncustomer1 = Customer(id=1, name='John Doe', balance=200, credit_limit=1000)\ncustomer2 = Customer(id=2, name='Jane Smith', balance=300, credit_limit=1500)\ncustomer3 = Customer(id=3, name='Emily Davis', balance=150, credit_limit=800)\ncustomer4 = Customer(id=4, name='Michael Brown', balance=50, credit_limit=1200)\n\norder1 = Order(id=1, customer_id=1, date_shipped=date(2023, 1, 15), amount_total=150, notes='Urgent delivery')\norder2 = Order(id=2, customer_id=2, date_shipped=None, amount_total=200, notes='Standard shipping')\norder3 = Order(id=3, customer_id=3, date_shipped=date(2023, 2, 10), amount_total=100, notes='Gift package')\norder4 = Order(id=4, customer_id=4, date_shipped=None, amount_total=50, notes='Fragile items')\n\nproduct1 = Product(id=1, name='Widget', unit_price=50)\nproduct2 = Product(id=2, name='Gadget', unit_price=75)\nproduct3 = Product(id=3, name='Thing', unit_price=100)\nproduct4 = Product(id=4, name='Device', unit_price=200)\n\nitem1 = Item(id=1, order_id=1, product_id=1, quantity=2, unit_price=50, amount=100)\nitem2 = Item(id=2, order_id=2, product_id=2, quantity=1, unit_price=75, amount=75)\nitem3 = Item(id=3, order_id=3, product_id=3, quantity=1, unit_price=100, amount=100)\nitem4 = Item(id=4, order_id=4, product_id=4, quantity=1, unit_price=200, amount=200)\n",
+    "name": "EcommerceSystem"
+}
